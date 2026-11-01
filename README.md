@@ -3,6 +3,8 @@
 A volume button for the [Noctalia](https://noctalia.dev) bar with a hover
 popup for switching the sound output (speakers, headset, HDMI monitor…).
 
+![The sound output popup above the bar's volume icon, listing Line Out, Arctis Nova 4 and an HDMI monitor](docs/popup.png)
+
 - **Hover** the volume icon: a popup above it lists your outputs, the current
   one ticked. Click one to switch; audio that's already playing moves over too.
   The button at the top mutes.
