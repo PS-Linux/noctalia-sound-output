@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Lists audio outputs and switches between them, for the Noctalia sound-output
+# plugin. Uses pactl, so it works with PipeWire (pipewire-pulse) and PulseAudio.
+#
+#   sound-output status          JSON: default output, its volume/mute, all outputs
+#   sound-output set <sink>      make <sink> the default and move playing audio to it
+#   sound-output mute            toggle mute on the default output
+
+set -euo pipefail
+
+case ${1-} in
+status)
+    default=$(pactl get-default-sink)
+    pactl -f json list sinks | jq -c --arg default "$default" '
+        def pct: (.volume | to_entries | first.value.value_percent // "0%") | rtrimstr("%") | tonumber;
+        [ .[] | . as $s | .properties as $p
+          | ([.ports[]? | select(.name == $s.active_port)] | first) as $port
+          | (($s.active_port // "") | test("hdmi|displayport"; "i")
+              or (($p["device.profile.description"] // "") | test("HDMI"))) as $hdmi
+          | {
+              name,
+              volume: pct,
+              muted: .mute,
+              available: (($port.availability // "") != "not available"),
+              # Readable names: the monitor for HDMI, the product for USB and
+              # Bluetooth, the jack (Line Out, Headphones...) for built-in audio.
+              label: (if $hdmi then ($p["node.nick"] // $p["device.product.name"])
+                      elif ($p["device.bus"] | IN("usb", "bluetooth")) then ($p["device.product.name"] // $p["device.description"])
+                      else ($port.description // $s.description) end // $s.description),
+              detail: (if $hdmi then "HDMI / DisplayPort"
+                       elif $p["device.bus"] == "usb" then "USB"
+                       elif $p["device.bus"] == "bluetooth" then "Bluetooth"
+                       else "Built-in audio" end),
+              icon: (if $hdmi then "device-desktop"
+                     elif ($p["device.form_factor"] // "" | IN("headset", "headphone"))
+                          or ($p["device.bus"] | IN("usb", "bluetooth"))
+                          or (($s.active_port // "") | test("headphone"; "i")) then "headphones"
+                     else "device-speaker" end)
+            } ] as $sinks
+        | ($sinks | map(select(.name == $default)) | first) as $cur
+        | { default: $default, volume: ($cur.volume // 0), muted: ($cur.muted // false), sinks: $sinks }'
+    ;;
+set)
+    sink=${2:?usage: sound-output set <sink>}
+    pactl set-default-sink "$sink"
+    # Move what's already playing; new streams follow the default on their own.
+    pactl list short sink-inputs | cut -f1 | while read -r id; do
+        pactl move-sink-input "$id" "$sink" 2>/dev/null || true
+    done
+    ;;
+mute)
+    pactl set-sink-mute @DEFAULT_SINK@ toggle
+    ;;
+*)
+    echo "usage: sound-output status | set <sink> | mute" >&2
+    exit 2
+    ;;
+esac
