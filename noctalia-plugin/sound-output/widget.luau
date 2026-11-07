@@ -1,24 +1,16 @@
 --!nonstrict
--- Bar icon: volume glyph and percentage. Hover opens the output popup above
--- it; click opens Noctalia's audio panel. Scroll and right click are bound in
--- plugin.toml. The popup reports its own hover state ("popupHovered"), and the
--- popup closes once neither the icon nor the popup has been hovered for
--- CLOSE_GRACE_MS.
+-- Bar icon: volume glyph and percentage. Right click opens the output popup
+-- above it. Left click and scroll are bound in plugin.toml.
 
 local C = require("./common.luau")
 
-local CLOSE_GRACE_MS = 350
--- Opening another panel makes the pointer leave and re-enter the icon; hover
--- is ignored this long after a click so the popup doesn't open over it.
-local CLICK_QUIET_MS = 800
+-- Clicking the icon while the popup is open also counts as an outside click,
+-- which may close it just before onRightClick runs. Don't reopen it then.
+local REOPEN_GUARD_MS = 250
 local POLL_MS = 10000
 local DEBOUNCE_MS = 120
 
-local hoverIcon, hoverPopup, popupOpen = false, false, false
-local closeAt = nil
 local refreshAt = nil
-local suppressUntilLeave = false
-local quietUntil = 0
 local lastPoll = 0
 
 local function render()
@@ -31,41 +23,11 @@ local function render()
   end
 end
 
-local function openPopup()
-  if not popupOpen then
-    popupOpen = true
-    noctalia.togglePanel(C.POPUP)
-  end
-end
-
-local function closePopup()
-  if popupOpen then
-    popupOpen = false
-    noctalia.togglePanel(C.POPUP)
-  end
-end
-
 local function wake(at)
   noctalia.setUpdateInterval(math.max(16, at - noctalia.nowMs()))
 end
 
-local function scheduleClose()
-  closeAt = noctalia.nowMs() + CLOSE_GRACE_MS
-  wake(closeAt)
-end
-
 noctalia.state.watch("sound", render)
-noctalia.state.watch("popupOpen", function(open)
-  popupOpen = open == true
-end)
-noctalia.state.watch("popupHovered", function(hovered)
-  hoverPopup = hovered == true
-  if hoverPopup then
-    closeAt = nil
-  else
-    scheduleClose()
-  end
-end)
 
 -- Live updates: refresh shortly after any output or default-output change
 -- (several events arrive together, so they're batched).
@@ -78,12 +40,6 @@ end)
 
 function update()
   local now = noctalia.nowMs()
-  if closeAt and now >= closeAt then
-    closeAt = nil
-    if not hoverIcon and not hoverPopup then
-      closePopup()
-    end
-  end
   if refreshAt and now >= refreshAt then
     refreshAt = nil
     lastPoll = now
@@ -92,37 +48,13 @@ function update()
     lastPoll = now
     C.refresh()
   end
-  local nextAt = lastPoll + POLL_MS
-  if closeAt then
-    nextAt = math.min(nextAt, closeAt)
-  end
-  if refreshAt then
-    nextAt = math.min(nextAt, refreshAt)
-  end
-  wake(nextAt)
+  wake(refreshAt or (lastPoll + POLL_MS))
   render()
 end
 
-function onHover(entered)
-  local quiet = noctalia.nowMs() < quietUntil
-  hoverIcon = entered
-  if entered then
-    closeAt = nil
-    if not suppressUntilLeave and not quiet then
-      openPopup()
-    end
-  else
-    if not quiet then
-      suppressUntilLeave = false
-    end
-    scheduleClose()
+function onRightClick()
+  local closedAt = noctalia.state.get("popupClosedAt") or 0
+  if noctalia.state.get("popupOpen") == true or noctalia.nowMs() - closedAt >= REOPEN_GUARD_MS then
+    noctalia.togglePanel(C.POPUP)
   end
-end
-
-function onClick()
-  suppressUntilLeave = true
-  quietUntil = noctalia.nowMs() + CLICK_QUIET_MS
-  closeAt = nil
-  closePopup()
-  noctalia.runAsync({ "noctalia", "msg", "panel-toggle", "control-center", "audio" })
 end

@@ -1,16 +1,17 @@
 # Sound output bar button
 
-A volume button for the [Noctalia](https://noctalia.dev) bar with a hover
+A volume button for the [Noctalia](https://noctalia.dev) bar with a right-click
 popup for switching the sound output (speakers, headset, HDMI monitor…).
 
 ![The sound output popup above the bar's volume icon, listing Line Out, Arctis Nova 4 and an HDMI monitor](docs/popup.png)
 
-- **Hover** the volume icon: a popup above it lists your outputs, the current
-  one ticked. Click one to switch; audio that's already playing moves over too.
-  The button at the top mutes.
+- **Right click** the volume icon: a popup above it lists your outputs, the
+  current one ticked. Click one to switch; audio that's already playing moves
+  over too, and the popup closes. The button at the top mutes. Click anywhere
+  else or right click the icon again to close it.
 - **Click** the icon: Noctalia's audio panel (per-app volumes), as before.
-- **Scroll** for volume (1% steps), **right click** to mute, the same as the
-  built-in volume widget it replaces.
+- **Scroll** for volume in 5% steps, like the built-in volume widget it
+  replaces.
 
 ## Install
 

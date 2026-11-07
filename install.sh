@@ -87,4 +87,4 @@ print(f"bar.{name}.{section}", json.dumps(items))
 ' "$WIDGET_NAME")
 noctalia msg config-set "$BAR_PATH" "$NEW_LIST" >/dev/null
 
-say "Done. Hover the volume icon in the bar to pick the sound output."
+say "Done. Right click the volume icon in the bar to pick the sound output."

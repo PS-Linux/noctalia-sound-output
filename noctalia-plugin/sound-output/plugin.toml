@@ -1,6 +1,6 @@
 # Volume button with an output picker.
-# Shows the volume like the built-in widget; hover it for a popup to switch the
-# sound output, click it for Noctalia's audio panel.
+# Shows the volume like the built-in widget; right click it for a popup to
+# switch the sound output, left click it for Noctalia's audio panel.
 # The work is done by ~/.local/bin/sound-output.
 
 id = "ps/sound-output"
@@ -12,30 +12,28 @@ license = "MIT"
 dependencies = ["pactl", "jq"]
 tags = ["audio", "volume"]
 icon = "volume"
-description = "Volume button whose hover popup switches the sound output."
+description = "Volume button whose right-click popup switches the sound output."
 
 [[widget]]
 id = "button"
 entry = "widget.luau"
 
-# Same gestures as the built-in volume widget; scroll and right click go
-# through Noctalia so its volume OSD still shows. Left click is onClick in
-# widget.luau, which also keeps the hover popup from reopening.
+# Same as the built-in volume widget, except that right click is onRightClick
+# in widget.luau. Scroll goes through Noctalia so its volume OSD still shows.
 [widget.actions]
-scroll_up = "volume-up 1%"
-scroll_down = "volume-down 1%"
-right = "volume-mute"
+left = "panel-toggle control-center audio"
+scroll_up = "volume-up 5%"
+scroll_down = "volume-down 5%"
 
 [[panel]]
 id = "popup"
 entry = "popup.luau"
 # Attached panels can only align to an end of the bar, not to a widget. The
 # icon sits near the right end, so align there and make the popup wide enough
-# to cover it: moving the pointer straight up from the icon lands inside.
+# to sit over it.
 width = 380
 height = "content"
 max_height = 420
 placement = "attached"
 position = "bottom_right"
-keyboard_focus = "none"
-dismiss_on_outside_click = false
+dismiss_on_outside_click = true

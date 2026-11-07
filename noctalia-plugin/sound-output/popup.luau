@@ -3,12 +3,6 @@
 
 local C = require("./common.luau")
 
--- Every node reports enter/leave; the widget waits a short grace period after
--- a leave, so moving between rows never closes the popup.
-local function onHover(state)
-  noctalia.state.set("popupHovered", state == "true")
-end
-
 local function outputRow(sink, selected)
   return ui.row({
     key = sink.name,
@@ -18,11 +12,11 @@ local function outputRow(sink, selected)
     radius = 8,
     fill = selected and "primary/0.10" or "surface_container",
     opacity = sink.available and 1 or 0.5,
-    onHover = onHover,
     onClick = function()
       if not selected then
         C.select(sink.name)
       end
+      panel.close()
     end,
   }, {
     ui.glyph({ name = sink.icon, size = 20, color = selected and "primary" or "on_surface_variant" }),
@@ -43,7 +37,7 @@ local function render()
   local sound = noctalia.state.get("sound")
   local rows = {}
 
-  table.insert(rows, ui.row({ gap = 8, align = "center", paddingH = 4, onHover = onHover }, {
+  table.insert(rows, ui.row({ gap = 8, align = "center", paddingH = 4 }, {
     ui.glyph({ name = C.volumeGlyph(sound), size = 16, color = "primary" }),
     ui.label({ text = "Sound output", fontWeight = "semibold", flexGrow = 1 }),
     ui.label({
@@ -57,8 +51,6 @@ local function render()
       controlSize = "sm",
       tooltip = sound and sound.muted and "Unmute" or "Mute",
       selected = sound ~= nil and sound.muted,
-      -- The button takes the hover from the row around it, so report it too.
-      onHover = onHover,
       onClick = C.toggleMute,
     }),
   }))
@@ -80,7 +72,7 @@ local function render()
     textAlign = "center",
   }))
 
-  panel.render(ui.column({ gap = 6, padding = 10, onHover = onHover }, rows))
+  panel.render(ui.column({ gap = 6, padding = 10 }, rows))
 end
 
 noctalia.state.watch("sound", render)
@@ -93,5 +85,5 @@ end
 
 function onClose()
   noctalia.state.set("popupOpen", false)
-  noctalia.state.set("popupHovered", false)
+  noctalia.state.set("popupClosedAt", noctalia.nowMs())
 end
